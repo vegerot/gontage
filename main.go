@@ -62,20 +62,31 @@ func main() {
 	count_vertical_frames := -1
 	count_horizontal_frames := 0
 	// var wg1 sync.WaitGroup
-	for i, sprite_image := range sprites {
-		bounds := sprite_image.Bounds()
-		w := bounds.Dx()
-		h := bounds.Dy()
-		if i%hframes == 0 {
-			count_vertical_frames++
-		}
-		if i%hframes != 0 {
-			count_horizontal_frames += 1
-		} else {
-			count_horizontal_frames = 0
-		}
-		draw.Draw(spritesheet, image.Rect(count_horizontal_frames*h, count_vertical_frames*w, w*8, h*3), sprite_image, image.Point{}, draw.Over)
-	}
+
+	// for i := 1; i < vframes+1; i++ {
+	// for i, sprite_image := range hframes {
+	// 	// for j := 0; j < hframes; j++ {
+	// 	// 	if i*j < len(sprites_folder) {
+	// 	// 		fmt.Println(i*j, "test")
+	// 	// 		sprite_image := sprites[j*i]
+	// 	// 		bounds := sprite_image.Bounds()
+	// 	// 		w := bounds.Dx()
+	// 	// 		h := bounds.Dy()
+	// 	// 		fmt.Println(j+i, w, h)
+	// 	// 		draw.Draw(spritesheet, image.Rect(j*w, (i-1)*h, w*8, h*3), sprite_image, image.Point{}, draw.Over)
+	// 	// 	}
+	// 	// }
+	// 	// }
+	// }
+
+	var wg1 sync.WaitGroup
+	// sprites_mid = len(sprites)
+	wg1.Add(1)
+	go func() {
+		defer wg1.Done()
+		paint_spritesheet(sprites, hframes, count_vertical_frames, count_horizontal_frames, spritesheet)
+	}()
+	wg1.Wait()
 
 	f, err := os.Create("spritesheet.png")
 	if err != nil {
@@ -114,5 +125,22 @@ func decode_images(sprites_folder []fs.DirEntry, pwd string, wg *sync.WaitGroup,
 
 	fmt.Println(sprites_array, "tee")
 	return sprites_array
+
+}
+func paint_spritesheet(sprites []image.Image, hframes int, count_vertical_frames int, count_horizontal_frames int, spritesheet draw.Image) {
+	for i, sprite_image := range sprites {
+		bounds := sprite_image.Bounds()
+		w := bounds.Dx()
+		h := bounds.Dy()
+		if i%hframes == 0 {
+			count_vertical_frames++
+		}
+		if i%hframes != 0 {
+			count_horizontal_frames += 1
+		} else {
+			count_horizontal_frames = 0
+		}
+		draw.Draw(spritesheet, image.Rect(count_horizontal_frames*h, count_vertical_frames*w, w*8, h*3), sprite_image, image.Point{}, draw.Over)
+	}
 
 }
