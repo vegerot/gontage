@@ -29,27 +29,42 @@ func main() {
 	// sprite_height := 0
 	// sprite_width := 0
 
-	var sprites1 []image.Image
-	var sprites2 []image.Image
+	// var sprites1 []image.Image
+	// var sprites2 []image.Image
+	var spritesd [][]image.Image
 	var sprites []image.Image
-	mid := len(sprites_folder) / 2
+	// mid := len(sprites_folder) / 2
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		sprites1 = decode_images(sprites_folder[:mid], pwd, &wg, sprites1)
-	}()
-	wg.Add(1)
-	go func() {
-		sprites2 = decode_images(sprites_folder[mid:], pwd, &wg, sprites2)
-	}()
+	chunked_images := chunk_images(sprites_folder, 2)
+	for _, chunk_image := range chunked_images {
+		wg.Add(1)
+		go func(chunk_image []fs.DirEntry) {
+			temp := decode_images(chunk_image, pwd, &wg)
+			spritesd = append(spritesd, temp)
+		}(chunk_image)
 
+	}
 	wg.Wait()
-	fmt.Println("sp1", sprites1)
-	sprites = append(sprites, sprites1...)
-	sprites = append(sprites, sprites2...)
-	fmt.Println(sprites)
+
+	for _, sprite := range spritesd {
+		sprites = append(sprites, sprite...)
+
+	}
+	// wg.Add(1)
+	// go func() {
+	// 	sprites1 = decode_images(sprites_folder[:mid], pwd, &wg, sprites1)
+	// }()
+	// wg.Add(1)
+	// go func() {
+	// 	sprites2 = decode_images(sprites_folder[mid:], pwd, &wg, sprites2)
+	// }()
+
+	// fmt.Println("sp1", sprites1)
+	// sprites = append(sprites, sprites1...)
+	// sprites = append(sprites, sprites2...)
+	// fmt.Println(sprites)
 
 	hframes := 8
 	vframes := 3
@@ -59,8 +74,8 @@ func main() {
 	// transparent_background := color.RGBA{0, 0, 0, 0}
 	draw.Draw(spritesheet, spritesheet.Bounds(), spritesheet, image.Point{}, draw.Src)
 
-	count_vertical_frames := -1
-	count_horizontal_frames := 0
+	// count_vertical_frames := -1
+	// count_horizontal_frames := 0
 	// var wg1 sync.WaitGroup
 
 	// for i := 1; i < vframes+1; i++ {
@@ -78,15 +93,23 @@ func main() {
 	// 	// }
 	// 	// }
 	// }
+	sprites_chunked := chunkSlice(sprites, hframes)
 
 	var wg1 sync.WaitGroup
-	// sprites_mid = len(sprites)
-	wg1.Add(1)
-	go func() {
-		defer wg1.Done()
-		paint_spritesheet(sprites, hframes, count_vertical_frames, count_horizontal_frames, spritesheet)
-	}()
+	for count_vertical_frames, sprite_chunk := range sprites_chunked {
+		wg1.Add(1)
+		fmt.Println(count_vertical_frames)
+		go func(count_vertical_frames int, sprite_chunk []image.Image) {
+			defer wg1.Done()
+			paint_spritesheet(sprite_chunk, hframes, count_vertical_frames, spritesheet)
+		}(count_vertical_frames, sprite_chunk)
+		// for sprite_index, sprite := range sprite_chunk {
+		// }
+	}
 	wg1.Wait()
+
+	// sprites_mid = len(sprites)
+	// paint_spritesheet(sprites, hframes, count_vertical_frames, count_horizontal_frames, spritesheet)
 
 	f, err := os.Create("spritesheet.png")
 	if err != nil {
@@ -96,15 +119,16 @@ func main() {
 	if err = png.Encode(f, spritesheet); err != nil {
 		log.Printf("failed to encode: %v", err)
 	}
-	fmt.Println(len(sprites_folder))
+	// fmt.Println(len(sprites_folder))
 	fmt.Println(time.Since(start))
 
 }
 
-func decode_images(sprites_folder []fs.DirEntry, pwd string, wg *sync.WaitGroup, sprites_array []image.Image) []image.Image {
+func decode_images(sprites_folder []fs.DirEntry, pwd string, wg *sync.WaitGroup) []image.Image {
 	defer wg.Done()
+	var sprites_array []image.Image
 	for _, sprite := range sprites_folder {
-		fmt.Println(sprite)
+		// fmt.Println(sprite)
 		if reader, err := os.Open(filepath.Join(pwd, "sprites", sprite.Name())); err == nil {
 			defer reader.Close()
 			m, _, err := image.Decode(reader)
@@ -119,28 +143,61 @@ func decode_images(sprites_folder []fs.DirEntry, pwd string, wg *sync.WaitGroup,
 			// 	sprite_height = h
 			// 	sprite_width = w
 			// }
-			fmt.Println(sprites_array, "arr")
+			// fmt.Println(sprites_array, "arr")
 		}
 	}
 
-	fmt.Println(sprites_array, "tee")
+	// fmt.Println(sprites_array, "tee")
 	return sprites_array
-
 }
-func paint_spritesheet(sprites []image.Image, hframes int, count_vertical_frames int, count_horizontal_frames int, spritesheet draw.Image) {
-	for i, sprite_image := range sprites {
+
+func paint_spritesheet(sprites []image.Image, hframes int, count_vertical_frames int, spritesheet draw.Image) {
+	for count_horizontal_frames, sprite_image := range sprites {
 		bounds := sprite_image.Bounds()
 		w := bounds.Dx()
 		h := bounds.Dy()
-		if i%hframes == 0 {
-			count_vertical_frames++
-		}
-		if i%hframes != 0 {
-			count_horizontal_frames += 1
-		} else {
-			count_horizontal_frames = 0
-		}
+		// if i%hframes == 0 {
+		// 	count_vertical_frames++
+		// }
+		// if i%hframes != 0 {
+		// 	count_horizontal_frames += 1
+		// } else {
+		// 	count_horizontal_frames = 0
+		// }
 		draw.Draw(spritesheet, image.Rect(count_horizontal_frames*h, count_vertical_frames*w, w*8, h*3), sprite_image, image.Point{}, draw.Over)
 	}
 
+}
+func chunk_images(slice []fs.DirEntry, chunkSize int) [][]fs.DirEntry {
+	var chunks [][]fs.DirEntry
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+
+		// necessary check to avoid slicing beyond
+		// slice capacity
+		if end > len(slice) {
+			end = len(slice)
+		}
+
+		chunks = append(chunks, slice[i:end])
+	}
+
+	return chunks
+}
+
+func chunkSlice(slice []image.Image, chunkSize int) [][]image.Image {
+	var chunks [][]image.Image
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+
+		// necessary check to avoid slicing beyond
+		// slice capacity
+		if end > len(slice) {
+			end = len(slice)
+		}
+
+		chunks = append(chunks, slice[i:end])
+	}
+
+	return chunks
 }
