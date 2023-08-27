@@ -29,41 +29,41 @@ func main() {
 	// sprite_height := 0
 	// sprite_width := 0
 
-	// var sprites1 []image.Image
-	// var sprites2 []image.Image
-	var spritesd [][]image.Image
+	var sprites1 []image.Image
+	var sprites2 []image.Image
+	// var spritesd [][]image.Image
 	var sprites []image.Image
-	// mid := len(sprites_folder) / 2
 
+	// chunked_images := chunk_images(sprites_folder, 2)
+	// for _, chunk_image := range chunked_images {
+	// 	wg.Add(1)
+	// 	go func(chunk_image []fs.DirEntry) {
+	// 		temp := decode_images(chunk_image, pwd, &wg)
+	// 		spritesd = append(spritesd, temp)
+	// 	}(chunk_image)
+
+	// }
+
+	// for _, sprite := range spritesd {
+	// 	sprites = append(sprites, sprite...)
+
+	// }
+
+	mid := len(sprites_folder) / 2
 	var wg sync.WaitGroup
-
-	chunked_images := chunk_images(sprites_folder, 2)
-	for _, chunk_image := range chunked_images {
-		wg.Add(1)
-		go func(chunk_image []fs.DirEntry) {
-			temp := decode_images(chunk_image, pwd, &wg)
-			spritesd = append(spritesd, temp)
-		}(chunk_image)
-
-	}
+	wg.Add(1)
+	go func() {
+		sprites1 = decode_images(sprites_folder[:mid], pwd, &wg)
+	}()
+	wg.Add(1)
+	go func() {
+		sprites2 = decode_images(sprites_folder[mid:], pwd, &wg)
+	}()
 	wg.Wait()
 
-	for _, sprite := range spritesd {
-		sprites = append(sprites, sprite...)
-
-	}
-	// wg.Add(1)
-	// go func() {
-	// 	sprites1 = decode_images(sprites_folder[:mid], pwd, &wg, sprites1)
-	// }()
-	// wg.Add(1)
-	// go func() {
-	// 	sprites2 = decode_images(sprites_folder[mid:], pwd, &wg, sprites2)
-	// }()
-
-	// fmt.Println("sp1", sprites1)
-	// sprites = append(sprites, sprites1...)
-	// sprites = append(sprites, sprites2...)
+	fmt.Println("sp1", sprites1)
+	sprites = append(sprites, sprites1...)
+	sprites = append(sprites, sprites2...)
 	// fmt.Println(sprites)
 
 	hframes := 8
@@ -167,22 +167,6 @@ func paint_spritesheet(sprites []image.Image, hframes int, count_vertical_frames
 		draw.Draw(spritesheet, image.Rect(count_horizontal_frames*h, count_vertical_frames*w, w*8, h*3), sprite_image, image.Point{}, draw.Over)
 	}
 
-}
-func chunk_images(slice []fs.DirEntry, chunkSize int) [][]fs.DirEntry {
-	var chunks [][]fs.DirEntry
-	for i := 0; i < len(slice); i += chunkSize {
-		end := i + chunkSize
-
-		// necessary check to avoid slicing beyond
-		// slice capacity
-		if end > len(slice) {
-			end = len(slice)
-		}
-
-		chunks = append(chunks, slice[i:end])
-	}
-
-	return chunks
 }
 
 func chunkSlice(slice []image.Image, chunkSize int) [][]image.Image {
