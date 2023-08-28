@@ -42,7 +42,9 @@ func decodeImages(sprites_folder []fs.DirEntry, pwd string, wg *sync.WaitGroup) 
 	defer wg.Done()
 	for _, sprite := range sprites_folder {
 		if reader, err := os.Open(filepath.Join(pwd, "sprites", sprite.Name())); err == nil {
-			defer reader.Close()
+		  defer reader.Close() //slow
+		// reader.Close() //fast
+
 		}
 	}
 }
