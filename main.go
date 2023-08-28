@@ -14,7 +14,9 @@ import (
 	"time"
 )
 
+func init() { runtime.GOMAXPROCS(runtime.NumCPU()) }
 func main() {
+
 	start := time.Now()
 	// targetFolder := flag.String("f", "owner/repo", "folder containing sprites")
 	// flag.Parse()
